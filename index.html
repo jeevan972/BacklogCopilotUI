@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Backlog Copilot – Azure DevOps Backlog Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    header span {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    main {
+      display: flex;
+      gap: 18px;
+      padding: 16px;
+      min-height: calc(100vh - 52px);
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+    }
+
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 460px;
+    }
+
+    .right {
+      flex: 1;
+      max-height: calc(100vh - 88px);
+      overflow-y: auto;
+    }
+
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 8px 9px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      font-family: inherit;
+      background: #f9fafb;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 160px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > div {
+      flex: 1;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 7px 11px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    button.primary {
+      background: #2563eb;
+      color: #f9fafb;
+    }
+
+    button.primary:disabled {
+      background: #93c5fd;
+      cursor: default;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button.danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    .status.error {
+      color: #b91c1c;
+    }
+
+    .status.success {
+      color: #15803d;
+    }
+
+    /* Preview styles */
+    .feature-card {
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: #f9fafb;
+    }
+
+    .feature-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .feature-header h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .feature-header span {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .feature-card p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    .story {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed #e5e7eb;
+    }
+
+    .story-title-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .story-title-line h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .story-title-line span {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .story p {
+      margin: 3px 0;
+      font-size: 12px;
+    }
+
+    .story ul {
+      margin: 4px 0 4px 18px;
+      padding: 0;
+      font-size: 12px;
+    }
+
+    .story-meta {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    .empty-preview {
+      font-size: 13px;
+      color: #6b7280;
+      border: 1px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f9fafb;
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+
+      .left {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Backlog Copilot</h1>
+    <span>AI-assisted backlog generator for Dynamics 365 / Azure DevOps</span>
+  </div>
+  <div class="pill">v1 · Local POC</div>
+</header>
+
+<main>
+  <!-- LEFT: FC input -->
+  <section class="left panel">
+    <h2>1. Project & Azure DevOps Context</h2>
+    <div>
+      <label for="projectName">Project name</label>
+      <div class="hint">Example: NUC CRM – Lead Management, Isaac CRM – Pursuit Team Automation</div>
+      <input id="projectName" type="text" />
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="adoProject">Azure DevOps project</label>
+        <div class="hint">Example: Sandbox - Playground project</div>
+        <input id="adoProject" type="text" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="areaPath">Area path</label>
+        <div class="hint">Example: Sandbox - Playground project</div>
+        <input id="areaPath" type="text" />
+      </div>
+      <div>
+        <label for="iterationPath">Iteration path</label>
+        <div class="hint">Example: Sandbox - Playground project\\Sprint 1</div>
+        <input id="iterationPath" type="text" />
+      </div>
+    </div>
+
+    <h2 style="margin-top: 10px;">2. Client Requirements</h2>
+    <div>
+      <label for="requirements">Paste raw requirements</label>
+      <div class="hint">
+        Paste BRD notes, email threads, workshop notes, etc. The AI will convert this into Features + User Stories + AC.
+      </div>
+      <textarea id="requirements" placeholder="Example: NUC needs a lead form to capture contact profile, source, prequalification, and auto-create an opportunity when status = Qualified..."></textarea>
+    </div>
+
+    <div class="buttons">
+      <button class="primary" id="btnGenerate">Generate backlog draft</button>
+      <button class="secondary" id="btnClear">Clear</button>
+    </div>
+
+    <h2 style="margin-top: 10px;">3. Refine & Create</h2>
+    <div>
+      <label for="feedback">Refinement feedback (optional)</label>
+      <div class="hint">
+        Example: “Make AC more D365-specific”, “Add email tracking edge cases”, “Split the big story into 2 smaller ones”.
+      </div>
+      <textarea id="feedback" placeholder="Describe how you want the draft to be improved..."></textarea>
+    </div>
+
+    <div class="buttons">
+      <button class="secondary" id="btnRefine">Refine / Regenerate draft</button>
+      <button class="primary" id="btnCreate">Create in Azure DevOps</button>
+      <button class="danger" id="btnDumpJson">Download draft JSON</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </section>
+
+  <!-- RIGHT: Preview -->
+  <section class="right panel">
+    <h2>Preview – Features & User Stories</h2>
+    <div id="preview"></div>
+  </section>
+</main>
+
+<script>
+  // === CONFIG: point this to your Function App base URL ===
+  // For local development:
+  const FUNCTION_BASE_URL = "https://backlogcopilot-jv-dev.azurewebsites.net/api";
+
+  // If you later deploy to Azure, change FUNCTION_BASE_URL to your function URL:
+  // const FUNCTION_BASE_URL = "https://<your-func-app>.azurewebsites.net/api";
+
+    
+
+  let currentDraft = null;
+  let isBusy = false;
+
+  function setStatus(message, type) {
+    const el = document.getElementById("status");
+    el.textContent = message || "";
+    el.className = "status";
+    if (type === "error") el.classList.add("error");
+    if (type === "success") el.classList.add("success");
+  }
+
+  function setBusy(state) {
+    isBusy = state;
+    document.getElementById("btnGenerate").disabled = state;
+    document.getElementById("btnRefine").disabled = state;
+    document.getElementById("btnCreate").disabled = state;
+  }
+
+  function renderDraft() {
+    const container = document.getElementById("preview");
+    container.innerHTML = "";
+
+    if (!currentDraft || !currentDraft.features || currentDraft.features.length === 0) {
+      container.innerHTML =
+        '<div class="empty-preview">No backlog draft yet. Generate a draft to see Features and User Stories here.</div>';
+      return;
+    }
+
+    currentDraft.features.forEach((feature, fi) => {
+      const card = document.createElement("div");
+      card.className = "feature-card";
+
+      const header = document.createElement("div");
+      header.className = "feature-header";
+
+      const h3 = document.createElement("h3");
+      h3.textContent = `F${fi + 1} – ${feature.title || "Untitled feature"}`;
+      header.appendChild(h3);
+
+      const spanIdx = document.createElement("span");
+      spanIdx.textContent = `Feature #${fi + 1}`;
+      header.appendChild(spanIdx);
+
+      card.appendChild(header);
+
+      const desc = document.createElement("p");
+      desc.textContent = feature.description || "";
+      card.appendChild(desc);
+
+      if (feature.tags && feature.tags.length) {
+        const tagsDiv = document.createElement("div");
+        feature.tags.forEach((t) => {
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = t;
+          tagsDiv.appendChild(tag);
+        });
+        card.appendChild(tagsDiv);
+      }
+
+      (feature.userStories || []).forEach((story, si) => {
+        const storyDiv = document.createElement("div");
+        storyDiv.className = "story";
+
+        const titleLine = document.createElement("div");
+        titleLine.className = "story-title-line";
+
+        const h4 = document.createElement("h4");
+        h4.textContent = `US${fi + 1}.${si + 1} – ${story.title || "Untitled story"}`;
+        titleLine.appendChild(h4);
+
+        const spanMeta = document.createElement("span");
+        spanMeta.textContent = story.priority ? `Priority: ${story.priority}` : "";
+        titleLine.appendChild(spanMeta);
+
+        storyDiv.appendChild(titleLine);
+
+        const sdesc = document.createElement("p");
+        sdesc.textContent = story.description || "";
+        storyDiv.appendChild(sdesc);
+
+        if (story.acceptanceCriteria && story.acceptanceCriteria.length) {
+          const acLabel = document.createElement("p");
+          acLabel.innerHTML = "<strong>Acceptance Criteria</strong>";
+          storyDiv.appendChild(acLabel);
+
+          const ul = document.createElement("ul");
+          story.acceptanceCriteria.forEach((ac) => {
+            const li = document.createElement("li");
+            li.textContent = ac;
+            ul.appendChild(li);
+          });
+          storyDiv.appendChild(ul);
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "story-meta";
+        const tagsText = (story.tags || []).join(", ");
+        meta.textContent = tagsText ? `Tags: ${tagsText}` : "";
+        storyDiv.appendChild(meta);
+
+        card.appendChild(storyDiv);
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+  async function callApi(path, body) {
+    const url = `${FUNCTION_BASE_URL}${path}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body || {})
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`API error ${res.status}: ${text}`);
+    }
+
+    return await res.json();
+  }
+
+  // === Event handlers ===
+
+  document.getElementById("btnGenerate").addEventListener("click", async () => {
+    const projectName = document.getElementById("projectName").value.trim();
+    const adoProject = document.getElementById("adoProject").value.trim();
+    const areaPath = document.getElementById("areaPath").value.trim();
+    const iterationPath = document.getElementById("iterationPath").value.trim();
+    const requirements = document.getElementById("requirements").value.trim();
+
+    if (!requirements) {
+      setStatus("Please paste some client requirements before generating a draft.", "error");
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Generating backlog draft via Azure OpenAI...");
+
+    try {
+      const draft = await callApi("/backlog/draft", {
+        projectName,
+        azureDevOpsProject: adoProject,
+        areaPath,
+        iterationPath,
+        requirementsText: requirements
+      });
+
+      currentDraft = draft;
+      renderDraft();
+      setStatus("Draft generated. Review the Features and User Stories on the right.", "success");
+    } catch (err) {
+      console.error(err);
+      setStatus(`Error generating draft: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById("btnRefine").addEventListener("click", async () => {
+    if (!currentDraft) {
+      setStatus("No draft to refine yet. Generate a draft first.", "error");
+      return;
+    }
+
+    const feedback = document.getElementById("feedback").value.trim();
+    const projectNameInput = document.getElementById("projectName").value.trim();
+
+    const projectName = projectNameInput || currentDraft.projectName || "";
+
+    if (!feedback) {
+      setStatus("Add some feedback to tell the AI how to refine the draft.", "error");
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Refining backlog draft with your feedback...");
+
+    try {
+      const refined = await callApi("/backlog/refine", {
+        projectName,
+        draft: currentDraft,
+        feedback
+      });
+
+      currentDraft = refined;
+      renderDraft();
+      setStatus("Draft refined. Review the updated Features and User Stories.", "success");
+    } catch (err) {
+      console.error(err);
+      setStatus(`Error refining draft: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById("btnCreate").addEventListener("click", async () => {
+    if (!currentDraft) {
+      setStatus("No draft to create in Azure DevOps. Generate a draft first.", "error");
+      return;
+    }
+
+    const adoProject = document.getElementById("adoProject").value.trim();
+    const areaPath = document.getElementById("areaPath").value.trim();
+    const iterationPath = document.getElementById("iterationPath").value.trim();
+
+    if (!adoProject) {
+      setStatus("Please enter the Azure DevOps project before creating work items.", "error");
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Creating Features & User Stories in Azure DevOps...");
+
+    try {
+      const result = await callApi("/backlog/create", {
+        azureDevOpsProject: adoProject,
+        areaPath,
+        iterationPath,
+        draft: currentDraft
+      });
+
+      console.log("Create result:", result);
+      const featureCount = (result.features || []).length;
+      const storyCount = (result.stories || []).length;
+
+      setStatus(
+        `Successfully created ${featureCount} Features and ${storyCount} User Stories in Azure DevOps.`,
+        "success"
+      );
+
+      alert(
+        `Backlog created in Azure DevOps.\n\nFeatures: ${featureCount}\nUser Stories: ${storyCount}\n\nCheck your backlog in Azure DevOps for details.`
+      );
+    } catch (err) {
+      console.error(err);
+      setStatus(`Error creating work items: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById("btnClear").addEventListener("click", () => {
+    document.getElementById("projectName").value = "";
+    document.getElementById("adoProject").value = "";
+    document.getElementById("areaPath").value = "";
+    document.getElementById("iterationPath").value = "";
+    document.getElementById("requirements").value = "";
+    document.getElementById("feedback").value = "";
+    currentDraft = null;
+    renderDraft();
+    setStatus("Form cleared.");
+  });
+
+  document.getElementById("btnDumpJson").addEventListener("click", () => {
+    if (!currentDraft) {
+      setStatus("No draft available to download.", "error");
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(currentDraft, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const name = currentDraft.projectName || "backlog-draft";
+    a.download = name.replace(/\s+/g, "-").toLowerCase() + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus("Current draft JSON downloaded.", "success");
+  });
+
+  // Initial preview
+  renderDraft();
+</script>
+</body>
+</html>
